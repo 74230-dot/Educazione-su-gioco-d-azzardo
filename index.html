@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BOOK OF THE PIRAMYDS — Slot educativa</title>
+<style>
+:root {
+  --gold:#e6b800; --sand:#f3d9a5; --dark:#0b1720;
+}
+body {
+  margin:0; font-family:"Segoe UI",Roboto,Arial,sans-serif;
+  background:radial-gradient(circle at center,#3c2506 0%,#0a0602 100%);
+  color:#fff; overflow-x:hidden;
+}
+header {text-align:center;padding:20px;}
+h1 {color:var(--gold);text-shadow:0 0 12px #000;}
+main {display:flex;flex-wrap:wrap;justify-content:center;gap:20px;padding:20px;}
+.slot {background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;width:720px;box-shadow:0 8px 30px rgba(0,0,0,.6);}
+.reels {display:flex;justify-content:center;gap:10px;margin-top:10px;}
+.reel {width:140px;height:140px;background:linear-gradient(180deg,#1a0d03,#3b2205);
+  border:4px solid rgba(255,255,255,0.1);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:70px;transition:transform 0.4s ease;
+}
+.controls {text-align:center;margin-top:20px;}
+button {
+  background:var(--gold);color:#000;font-weight:bold;border:none;
+  padding:14px 26px;border-radius:10px;cursor:pointer;font-size:18px;
+}
+button:active {transform:translateY(2px);}
+#msg {margin-top:14px;font-size:16px;color:#ffdf9a;font-weight:bold;text-shadow:0 0 10px #000;}
+.stats {margin-top:15px;display:flex;justify-content:space-around;font-size:16px;}
+.side {width:300px;background:rgba(255,255,255,0.05);padding:16px;border-radius:12px;}
+.balance {
+  font-size:28px;font-weight:700;color:var(--gold);
+  text-align:center;margin-bottom:12px;text-shadow:0 0 10px #000;
+}
+canvas {width:100%;height:140px;background:rgba(0,0,0,0.3);border-radius:8px;}
+.firework {
+  position:fixed;width:6px;height:6px;border-radius:50%;
+  animation:firework 1.4s ease-out forwards;z-index:999;
+}
+@keyframes firework {
+  0%{opacity:1;transform:translate(0,0) scale(1);}
+  100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(0);}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎰 BOOK OF THE PIRAMYDS 🎰</h1>
+  <p>Slot educativa a tema Faraone — sensibilizzazione sulla ludopatia</p>
+</header>
+
+<main>
+<section class="slot">
+  <div class="reels">
+    <div class="reel" id="r1">👁️</div>
+    <div class="reel" id="r2">🐈</div>
+    <div class="reel" id="r3">🦉</div>
+  </div>
+  <div class="controls">
+    <button id="spin">SPIN</button>
+    <div id="msg">Premi SPIN per iniziare</div>
+  </div>
+  <div class="stats">
+    <div>🎮 Giocate: <span id="plays">0</span></div>
+    <div>🏆 Vinte: <span id="wins">0</span></div>
+    <div>💀 Perse: <span id="losses">0</span></div>
+  </div>
+</section>
+
+<aside class="side">
+  <div class="balance">Saldo: €<span id="balance">100.00</span></div>
+  <canvas id="chart"></canvas>
+  <div id="bonus" style="margin-top:12px;color:#ffd27a;font-size:15px;text-align:center;">Bonus: Nessuno</div>
+</aside>
+</main>
+
+<script>
+// --- Config ---
+const symbols = ["🏜️","🦉","👁️","🐈","🗿"];
+const payouts = { "🏜️":50, "🦉":10, "👁️":5, "🐈":3, "🗿":2 };
+const probs = { "🏜️":0.005, "🦉":0.02, "👁️":0.04, "🐈":0.06, "🗿":0.10 };
+let balance=100, stake=1, plays=0, wins=0, losses=0, hist=[100];
+let bonus=null; let bonusCounter=0;
+const reels=[r1,r2,r3]; const ctx=chart.getContext("2d");
+const playsEl=document.getElementById("plays"), winsEl=document.getElementById("wins"), lossesEl=document.getElementById("losses");
+const msg=document.getElementById("msg");
+
+// --- Funzioni ---
+function rndSymbol(){
+  let r=Math.random(),cum=0;
+  for(const s of symbols){cum+=probs[s];if(r<cum)return s;}
+  return symbols[Math.floor(Math.random()*symbols.length)];
+}
+
+function spin(){
+  if(balance<stake){msg.textContent="Saldo insufficiente!";return;}
+  balance-=stake; plays++;
+  // animazioni lunghe: 4 secondi totali
+  const res=[rndSymbol(),rndSymbol(),rndSymbol()];
+  const delays=[2000,3000,4000];
+  reels.forEach((r,i)=>{
+    r.style.transition="transform 2s cubic-bezier(.2,.9,.3,1)";
+    r.style.transform="rotateX(1440deg)";
+    setTimeout(()=>{r.textContent=res[i];r.style.transform="rotateX(0)";},delays[i]);
+  });
+  setTimeout(()=>checkWin(res),4000);
+}
+
+function checkWin(res){
+  const [a,b,c]=res; let win=0;
+  if(a===b&&b===c){
+    win=payouts[a]; if(bonus==="Tesoro") win*=2;
+    wins++; fireworks(100); playSound(true);
+    msg.textContent=`Hai vinto €${win.toFixed(2)}!`;
+  } else {
+    losses++; playSound(false);
+    msg.textContent="Hai perso. Anubis sarà con te al prossimo spin.";
+  }
+  balance+=win;
+  hist.push(balance);
+  if(++bonusCounter%20===0)triggerBonus();
+  updateUI();
+}
+
+function triggerBonus(){
+  if(Math.random()<0.5){ bonus="Tesoro"; msg.textContent="💎 Bonus Tesoro del Faraone! Prossima vincita ×2"; }
+  else { bonus="Tempesta"; msg.textContent="
